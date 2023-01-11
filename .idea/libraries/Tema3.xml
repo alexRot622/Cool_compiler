@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="Tema3">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/coolc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/Checker.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>

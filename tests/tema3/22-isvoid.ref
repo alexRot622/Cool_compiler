@@ -1,0 +1,7 @@
+Loaded: trap.handler.nogc
+The following symbols are undefined:
+main
+
+x void
+self not void
+COOL program successfully executed

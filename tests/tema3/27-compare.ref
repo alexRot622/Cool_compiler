@@ -1,0 +1,11 @@
+Loaded: trap.handler.nogc
+The following symbols are undefined:
+main
+
+OK
+OK
+failed
+failed
+failed
+OK
+COOL program successfully executed

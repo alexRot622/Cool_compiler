@@ -1,0 +1,124 @@
+sequence(e) ::= "<e; separator=\"\n\">"
+sequenceSpaced(e) ::= "<e; separator=\"\n\n\">"
+
+heapStart() ::= <<
+    .globl heap_start
+heap_start:
+    .word 0
+>>
+
+// DATA
+dataSection(globals, tags, consts, nameTab, objTab, prots, dispTabs) ::=
+<<
+.align 2
+<globals>
+<tags>
+<consts>
+<nameTab>
+<objTab>
+<prots>
+<dispTabs>
+<heapStart()>
+>>
+
+tag(type, val) ::= <<
+_<type>_tag:
+    .word <val>
+
+>>
+program(data, textFuncs, textMain) ::= <<
+.data
+<data>
+
+.text
+<textFuncs>
+>>
+
+classProt(name, tag, size, attrs) ::= <<
+<name>_protObj:
+    .word <tag>
+    .word <size>
+    .word <name>_dispTab
+    <attrs>
+
+>>
+
+classDispTab(name, classes, methods) ::= <<
+<name>_dispTab:
+    <classes,methods:{class, method | .word <class>.<method><\n>}>
+>>
+
+classNameTab(names) ::= <<
+class_nameTab:
+    <names:{name | .word str_const<name><\n>}>
+>>
+
+intConst(tag, value) ::= <<
+int_const<tag>:
+    .word 2
+    .word 4
+    .word Int_dispTab
+    .word <value>
+
+>>
+
+strConst(tag, size, lenTag, value) ::= <<
+str_const<tag>:
+    .word 3
+    .word <size>
+    .word String_dispTab
+    .word int_const<lenTag>
+    .asciiz "<value>"
+    .align 2
+
+>>
+
+boolConst(tag, value) ::= <<
+bool_const<tag>:
+    .word 4
+    .word 4
+    .word Bool_dispTab
+    .word <value>
+
+>>
+
+// TEXT
+classInit(name, parentName) ::= <<
+<name>_init:
+    addiu $sp $sp -12
+    sw $fp 12($sp)
+    sw $s0 8($sp)
+    sw $ra 4($sp)
+    addiu $fp $sp 4
+    move $s0 $a0
+    <if(parentName)>jal <parentName>_init<endif>
+    move $s0 $a0
+    lw $fp 12($sp)
+    lw $s0 8($sp)
+    lw $ra 4($sp)
+    addiu $sp $sp 12
+    jr $ra
+>>
+
+// TODO: args
+method(class, name, e) ::= <<
+<class>.<name>:
+    addiu $sp $sp -12
+    sw $fp 12($sp)
+    sw $s0 8($sp)
+    sw $ra 4($sp)
+    addiu $fp $sp 4
+    move $s0 $a0
+<e>
+    lw $fp 12($fp)
+    lw $s0 8($sp)
+    lw $ra 4($sp)
+    addiu $sp $sp 12
+    jr $ra
+>>
+
+
+// EXPRESSIONS
+literal(addr) ::= <<
+	la $a0 <addr>
+>>

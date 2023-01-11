@@ -1,0 +1,5 @@
+Loaded: trap.handler.nogc
+The following symbols are undefined:
+main
+
+30-case-on-void.cl:30: Match on void in case statement.

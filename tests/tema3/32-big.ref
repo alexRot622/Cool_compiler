@@ -1,0 +1,8 @@
+Loaded: trap.handler.nogc
+The following symbols are undefined:
+main
+
+0 ! 2 
+Calculam factorial pentru: Factorial recursiv: 120
+Factorial iterativ: 120
+COOL program successfully executed
