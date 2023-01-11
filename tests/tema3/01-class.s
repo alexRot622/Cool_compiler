@@ -182,16 +182,20 @@ IO_protObj:
     .word IO_dispTab
 Int_protObj:
     .word 2
-    .word 3
+    .word 4
     .word Int_dispTab
+    .word 0
 String_protObj:
     .word 3
-    .word 3
+    .word 5
     .word String_dispTab
+    .word int_const0
+    .asciiz ""
 Bool_protObj:
     .word 4
-    .word 3
+    .word 4
     .word Bool_dispTab
+    .word 0
 A_protObj:
     .word 5
     .word 3
@@ -457,7 +461,7 @@ Main.main:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-	la $a0 int_const0
+la $a0 int_const0
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)

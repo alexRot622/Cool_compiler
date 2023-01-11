@@ -234,4 +234,14 @@ public class TypeSymbol extends Symbol implements Scope {
     static {
         BOOL.tag = 4;
     }
+
+    // For code generation only
+    public static final TypeSymbol _INT    = new TypeSymbol(null, "Int");
+    public static final TypeSymbol _STRING = new TypeSymbol(null, "String");
+    public static final TypeSymbol _BOOL   = new TypeSymbol(null, "Bool");
+
+    public boolean basicClass() {
+        return this == INT || this == STRING || this == BOOL;
+    }
+
 }

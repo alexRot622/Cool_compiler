@@ -141,20 +141,26 @@ IO_protObj:
     .word IO_dispTab
 Int_protObj:
     .word 2
-    .word 3
+    .word 4
     .word Int_dispTab
+    .word 0
 String_protObj:
     .word 3
-    .word 3
+    .word 5
     .word String_dispTab
+    .word int_const0
+    .asciiz ""
 Bool_protObj:
     .word 4
-    .word 3
+    .word 4
     .word Bool_dispTab
+    .word 0
 List_protObj:
     .word 5
-    .word 3
+    .word 5
     .word List_dispTab
+    .word 0
+    .word 0
 Main_protObj:
     .word 6
     .word 3
