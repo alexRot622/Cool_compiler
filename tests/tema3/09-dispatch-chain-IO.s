@@ -600,6 +600,12 @@ Main.main:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
+    la $a0 int_const6
+    sw $a0 0($sp)
+    addiu $sp $sp -4
+    la $a0 str_const8
+    sw $a0 0($sp)
+    addiu $sp $sp -4
 	move $a0 $s0
     bnez $a0 dispatch0
     la $a0 str_const14

@@ -143,7 +143,7 @@ public class Compiler {
             return;
         }
 
-        // TODO: repara .refs!
+        // TODO: repara .refs inainte de submisie!
         var codeGenVisitor = new CodeGenVisitor();
 
         System.out.println(ast.accept(codeGenVisitor).render());

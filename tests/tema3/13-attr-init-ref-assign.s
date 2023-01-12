@@ -169,6 +169,18 @@ str_const13:
     .word int_const4
     .asciiz "Main"
     .align 2
+int_const7:
+    .word 2
+    .word 4
+    .word Int_dispTab
+    .word 26
+str_const14:
+    .word 3
+    .word 11
+    .word String_dispTab
+    .word int_const7
+    .asciiz "13-attr-init-ref-assign.cl"
+    .align 2
 
 class_nameTab:
     .word str_const1
@@ -588,6 +600,54 @@ Main.main:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
+    lw $a0 12($s0)
+    sw $a0 0($sp)
+    addiu $sp $sp -4
+	move $a0 $s0
+    bnez $a0 dispatch0
+    la $a0 str_const14
+    li $t1 31
+    jal _dispatch_abort
+dispatch0:
+    lw $t1 8($a0) # dispatch table
+    lw $t1 16($t1) # method offset
+    jalr $t1
+    lw $a0 12($s0)
+    sw $a0 0($sp)
+    addiu $sp $sp -4
+	move $a0 $s0
+    bnez $a0 dispatch1
+    la $a0 str_const14
+    li $t1 33
+    jal _dispatch_abort
+dispatch1:
+    lw $t1 8($a0) # dispatch table
+    lw $t1 16($t1) # method offset
+    jalr $t1
+    lw $a0 16($s0)
+    sw $a0 0($sp)
+    addiu $sp $sp -4
+	move $a0 $s0
+    bnez $a0 dispatch2
+    la $a0 str_const14
+    li $t1 35
+    jal _dispatch_abort
+dispatch2:
+    lw $t1 8($a0) # dispatch table
+    lw $t1 12($t1) # method offset
+    jalr $t1
+    lw $a0 16($s0)
+    sw $a0 0($sp)
+    addiu $sp $sp -4
+	move $a0 $s0
+    bnez $a0 dispatch3
+    la $a0 str_const14
+    li $t1 37
+    jal _dispatch_abort
+dispatch3:
+    lw $t1 8($a0) # dispatch table
+    lw $t1 12($t1) # method offset
+    jalr $t1
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)

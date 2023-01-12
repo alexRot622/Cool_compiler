@@ -324,6 +324,7 @@ List.init:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
+	move $a0 $s0
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)

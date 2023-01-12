@@ -31,6 +31,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     // Mapping between class tag and the tag of the string constant corresponding to the class name
     ArrayList<Integer> classToName;
     private TypeSymbol currentClass = null;
+    private Scope currentScope = null;
 
     private HashMap<Symbol, Location> environment = new HashMap<>();
     private HashMap<Location, Object> store = new HashMap<>();
@@ -226,7 +227,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     @Override
     public ST visit(AstClass classs) {
         filename = new File(Compiler.fileNames.get(classs.getCtx())).getName();
-        currentClass = classs.getSymbol();
+        currentScope = currentClass = classs.getSymbol();
         classPrototype = templates.getInstanceOf("classProt");
         classDispTable = templates.getInstanceOf("classDispTab");
         typeSymbolGen(currentClass);
@@ -237,6 +238,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstMethod method) {
+        currentScope = method.getSymbol();
         var st = templates.getInstanceOf("method");
         st.add("class", currentClass.name)
           .add("name", method.getId().getToken().getText())
@@ -297,25 +299,28 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstDispatch dispatch) {
-        // Check if callee is null
         var st = templates.getInstanceOf("dispatch");
+
+        // Pushing arguments to the stack, in reverse order
+        var params = dispatch.getParams();
+        for (int i = params.size() - 1; i >= 0; i--) {
+            var push = templates.getInstanceOf("push")
+                    .add("arg", params.get(i).accept(this));
+            st.add("args", push);
+        }
+
         st.add("caller", dispatch.getCaller().accept(this))
           .add("dispIdx", dispIndex++)
           .add("filenameTag", stringConstant(filename))
           .add("line", dispatch.getToken().getLine());
 
-        // Pushing arguments to the stack, in reverse order
-        var it = dispatch.getParams().listIterator();
-        while (it.hasPrevious()) {
-            var arg = it.previous();
-            var push = templates.getInstanceOf("push")
-                    .add("arg", arg.accept(this));
-            st.add("args", push);
-        }
-
         // Obtaining the method offset
         String methodName = dispatch.getCallee().getToken().getText();
-        Location loc = environment.get(dispatch.getTypeSymbol().lookup(methodName));
+        Location loc = environment.get(dispatch.getCaller().getTypeSymbol().lookup(methodName));
+        if (loc == null) {
+            System.err.println(dispatch.getCallee().getToken().getLine() + ": runtime error");
+            return null;
+        }
         return st.add("methodOffset", loc.getOffset());
     }
 
@@ -365,7 +370,17 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         if (id.getToken().getText().equals("self"))
             st.add("e", "\tmove $a0 $s0");
         else {
-            // TODO: retrieve id value
+            Symbol sym = currentScope.lookup(id.getToken().getText());
+            if (!(sym instanceof IdSymbol)) {
+                System.err.println(id.getToken().getLine() + ": runtime error");
+                return null;
+            }
+            Location loc = environment.get(sym);
+            if (loc == null) {
+                System.err.println(id.getToken().getLine() + ": runtime error");
+            }
+
+            st.add("e", templates.getInstanceOf("loadVar").add("offset", loc.getOffset()));
         }
         return st;
     }
@@ -404,23 +419,27 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstCall call) {
         // Check if callee is null
         var st = templates.getInstanceOf("dispatch");
+
+        // Pushing arguments to the stack, in reverse order
+        var params = call.getParams();
+        for (int i = params.size() - 1; i >= 0; i--) {
+            var push = templates.getInstanceOf("push")
+                    .add("arg", params.get(i).accept(this));
+            st.add("args", push);
+        }
+
         st.add("caller", 	"\tmove $a0 $s0")
                 .add("dispIdx", dispIndex++)
                 .add("filenameTag", stringConstant(filename))
                 .add("line", call.getToken().getLine());
 
-        // Pushing arguments to the stack, in reverse order
-        var it = call.getParams().listIterator();
-        while (it.hasPrevious()) {
-            var arg = it.previous();
-            var push = templates.getInstanceOf("push")
-                    .add("arg", arg.accept(this));
-            st.add("args", push);
-        }
-
         // Obtaining the method offset
         String methodName = call.getMethod().getToken().getText();
-        Location loc = environment.get(call.getTypeSymbol().lookup(methodName));
+        Location loc = environment.get(currentClass.lookup(methodName));
+        if (loc == null) {
+            System.err.println(call.getMethod().getToken().getLine() + ": runtime error");
+            return null;
+        }
         return st.add("methodOffset", loc.getOffset());
     }
 
@@ -431,7 +450,10 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstBlock block) {
-        return null;
+        var st = templates.getInstanceOf("sequence");
+        for (var expr : block.getExprs())
+            st.add("e", expr.accept(this));
+        return st;
     }
 
     @Override

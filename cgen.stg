@@ -128,21 +128,25 @@ push(arg) ::= <<
     addiu $sp $sp -4
 >>
 
-call(args, offset) ::= <<
-<sequence(args)>
+call(offset) ::= <<
     lw $t1 8($a0) # dispatch table
     lw $t1 <offset>($t1) # method offset
     jalr $t1
 >>
 
 dispatch(caller, dispIdx, filenameTag, line, args, methodOffset) ::= <<
+<sequence(args)>
 <caller>
     bnez $a0 dispatch<dispIdx>
     la $a0 str_const<filenameTag>
     li $t1 <line>
     jal _dispatch_abort
 dispatch<dispIdx>:
-<call(args, methodOffset)>
+<call(methodOffset)>
+>>
+
+loadVar(offset) ::= <<
+    lw $a0 <offset>($s0)
 >>
 
 // EXPRESSIONS
