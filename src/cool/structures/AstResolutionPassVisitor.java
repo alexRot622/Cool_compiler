@@ -329,15 +329,18 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
                                       paramType.name + " of formal parameter " +
                                       definedParam.name + " is incompatible with declared type " +
                                       expectedType.name);
-                    return method.getTypeSymbol();
+                    dispatch.setTypeSymbol(method.getTypeSymbol());
+                    return dispatch.getTypeSymbol();
                 }
             }
         }
 
         if (method.getTypeSymbol() instanceof SelfTypeSymbol)
-            return exprType;
+            dispatch.setTypeSymbol(exprType);
+
         else
-            return method.getTypeSymbol();
+            dispatch.setTypeSymbol(method.getTypeSymbol());
+        return dispatch.getTypeSymbol();
     }
 
     @Override
@@ -697,11 +700,13 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
                             paramType.name + " of formal parameter " +
                             definedParam.name + " is incompatible with declared type " +
                             expectedType.name);
+                    call.setTypeSymbol(method.getTypeSymbol());
                     return method.getTypeSymbol();
                 }
             }
         }
 
+        call.setTypeSymbol(method.getTypeSymbol());
         return method.getTypeSymbol();
     }
 

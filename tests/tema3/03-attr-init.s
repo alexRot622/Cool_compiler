@@ -196,60 +196,60 @@ Int_protObj:
     .word 2
     .word 4
     .word Int_dispTab
-    .word 0
+.word 0
 String_protObj:
     .word 3
     .word 5
     .word String_dispTab
-    .word int_const0
-    .asciiz ""
+.word int_const0
+.asciiz ""
 Bool_protObj:
     .word 4
     .word 4
     .word Bool_dispTab
-    .word 0
+.word 0
 A_protObj:
     .word 5
     .word 4
     .word A_dispTab
-    .word int_const0
+.word int_const0
 B_protObj:
     .word 6
     .word 5
     .word B_dispTab
-    .word int_const0
-    .word str_const0
+.word int_const0
+.word str_const0
 C_protObj:
     .word 10
     .word 5
     .word C_dispTab
-    .word int_const0
-    .word 0
+.word int_const0
+.word 0
 D_protObj:
     .word 7
     .word 5
     .word D_dispTab
-    .word int_const0
-    .word str_const0
+.word int_const0
+.word str_const0
 E_protObj:
     .word 8
     .word 5
     .word E_dispTab
-    .word int_const0
-    .word str_const0
+.word int_const0
+.word str_const0
 F_protObj:
     .word 11
     .word 5
     .word F_dispTab
-    .word int_const0
-    .word 0
+.word int_const0
+.word 0
 Main_protObj:
     .word 9
     .word 6
     .word Main_dispTab
-    .word int_const0
-    .word str_const0
-    .word 0
+.word int_const0
+.word str_const0
+.word 0
 
 Object_dispTab:
     .word Object.abort
@@ -320,7 +320,7 @@ Object_init:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -334,7 +334,7 @@ IO_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -348,7 +348,7 @@ Int_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -362,7 +362,7 @@ String_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -376,7 +376,7 @@ Bool_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -392,7 +392,7 @@ A_init:
     jal Object_init
     la $a0 int_const6
     sw $a0 12($s0)
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -408,7 +408,7 @@ B_init:
     jal A_init
     la $a0 str_const8
     sw $a0 16($s0)
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -424,7 +424,7 @@ C_init:
     jal A_init
     la $a0 bool_const1
     sw $a0 16($s0)
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -438,7 +438,7 @@ D_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal B_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -452,7 +452,7 @@ E_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal B_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -466,7 +466,7 @@ F_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal C_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -480,7 +480,7 @@ Main_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal E_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -493,7 +493,7 @@ Main.main:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-la $a0 int_const0
+    la $a0 int_const0
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)

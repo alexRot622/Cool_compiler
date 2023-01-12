@@ -93,7 +93,7 @@ classInit(name, parentName, attrs) ::= <<
     move $s0 $a0
     <if(parentName)>jal <parentName>_init<endif>
 <sequence(attrs)>
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -123,34 +123,25 @@ method(class, name, e) ::= <<
 >>
 
 push(arg) ::= <<
-# PUSH_START
 <arg>
     sw $a0 0($sp)
     addiu $sp $sp -4
-#PUSH_END
 >>
 
 call(args, offset) ::= <<
-#CALL_START
-    sw $fp 0($sp)
-    addiu $sp $sp -4
-    sw $ra 0($sp)
-    addiu $sp $sp -4
 <sequence(args)>
     lw $t1 8($a0) # dispatch table
     lw $t1 <offset>($t1) # method offset
     jalr $t1
-    jal <id> <if(dStr)># <dStr><else><endif>
-#CALL_END
 >>
 
 dispatch(caller, dispIdx, filenameTag, line, args, methodOffset) ::= <<
 <caller>
     bnez $a0 dispatch<dispIdx>
     la $a0 str_const<filenameTag>
-    li  $t1 <line>
+    li $t1 <line>
     jal _dispatch_abort
-dispatch<idx>:
+dispatch<dispIdx>:
 <call(args, methodOffset)>
 >>
 

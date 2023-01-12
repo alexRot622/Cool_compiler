@@ -169,6 +169,18 @@ str_const13:
     .word int_const4
     .asciiz "Main"
     .align 2
+int_const7:
+    .word 2
+    .word 4
+    .word Int_dispTab
+    .word 23
+str_const14:
+    .word 3
+    .word 10
+    .word String_dispTab
+    .word int_const7
+    .asciiz "09-dispatch-chain-IO.cl"
+    .align 2
 
 class_nameTab:
     .word str_const1
@@ -196,60 +208,62 @@ Int_protObj:
     .word 2
     .word 4
     .word Int_dispTab
-    .word 0
+.word 0
 String_protObj:
     .word 3
     .word 5
     .word String_dispTab
-    .word int_const0
-    .asciiz ""
+.word int_const0
+.asciiz ""
 Bool_protObj:
     .word 4
     .word 4
     .word Bool_dispTab
-    .word 0
+.word 0
 A_protObj:
     .word 5
     .word 4
     .word A_dispTab
-    .word int_const0
+.word int_const0
 B_protObj:
     .word 6
     .word 5
     .word B_dispTab
-    .word int_const0
-    .word str_const0
+.word int_const0
+.word str_const0
 C_protObj:
     .word 10
-    .word 5
+    .word 6
     .word C_dispTab
-    .word int_const0
-    .word 0
+.word int_const0
+.word int_const0
+.word 0
 D_protObj:
     .word 7
     .word 5
     .word D_dispTab
-    .word int_const0
-    .word str_const0
+.word int_const0
+.word str_const0
 E_protObj:
     .word 8
     .word 5
     .word E_dispTab
-    .word int_const0
-    .word str_const0
+.word int_const0
+.word str_const0
 F_protObj:
     .word 11
-    .word 5
+    .word 6
     .word F_dispTab
-    .word int_const0
-    .word 0
+.word int_const0
+.word int_const0
+.word 0
 Main_protObj:
     .word 9
     .word 6
     .word Main_dispTab
-    .word int_const0
-    .word str_const0
-    .word 0
+.word int_const0
+.word str_const0
+.word 0
 
 Object_dispTab:
     .word Object.abort
@@ -305,7 +319,6 @@ C_dispTab:
     .word IO.out_int
     .word IO.in_string
     .word IO.in_int
-    .word A.f
     .word C.f
     .word C.h
 D_dispTab:
@@ -336,7 +349,6 @@ F_dispTab:
     .word IO.out_int
     .word IO.in_string
     .word IO.in_int
-    .word A.f
     .word C.f
     .word C.h
 Main_dispTab:
@@ -363,7 +375,7 @@ Object_init:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -377,7 +389,7 @@ IO_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -391,7 +403,7 @@ Int_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -405,7 +417,7 @@ String_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -419,7 +431,7 @@ Bool_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -435,7 +447,7 @@ A_init:
     jal IO_init
     la $a0 int_const6
     sw $a0 12($s0)
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -448,7 +460,7 @@ A.f:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-la $a0 int_const5
+    la $a0 int_const5
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -464,7 +476,7 @@ B_init:
     jal A_init
     la $a0 str_const8
     sw $a0 16($s0)
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -477,7 +489,7 @@ B.g:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-la $a0 int_const2
+    la $a0 int_const2
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -492,8 +504,8 @@ C_init:
     move $s0 $a0
     jal A_init
     la $a0 bool_const1
-    sw $a0 16($s0)
-    move $s0 $a0
+    sw $a0 20($s0)
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -506,7 +518,7 @@ C.f:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-la $a0 int_const3
+    la $a0 int_const3
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -519,7 +531,7 @@ C.h:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-la $a0 int_const4
+    la $a0 int_const4
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -533,7 +545,7 @@ D_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal B_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -547,7 +559,7 @@ E_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal B_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -561,7 +573,7 @@ F_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal C_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -575,7 +587,7 @@ Main_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal E_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -588,6 +600,23 @@ Main.main:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
+	move $a0 $s0
+    bnez $a0 dispatch0
+    la $a0 str_const14
+    li $t1 30
+    jal _dispatch_abort
+dispatch0:
+    lw $t1 8($a0) # dispatch table
+    lw $t1 12($t1) # method offset
+    jalr $t1
+    bnez $a0 dispatch1
+    la $a0 str_const14
+    li $t1 30
+    jal _dispatch_abort
+dispatch1:
+    lw $t1 8($a0) # dispatch table
+    lw $t1 16($t1) # method offset
+    jalr $t1
     lw $fp 12($fp)
     lw $s0 8($sp)
     lw $ra 4($sp)

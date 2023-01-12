@@ -1,9 +1,11 @@
 package cool.structures;
 
+import cool.compiler.Compiler;
 import cool.structures.AST.*;
 import org.stringtemplate.v4.ST;
 import org.stringtemplate.v4.STGroupFile;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -19,6 +21,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     ST classInit;
 
     int ifIndex = 0;
+    int dispIndex = 0;
     int strConstTag = 0;
     HashMap<String, Integer> strTagMap = new HashMap<>();
 
@@ -29,9 +32,10 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     ArrayList<Integer> classToName;
     private TypeSymbol currentClass = null;
 
-    private HashMap<IdSymbol, Location> environment = new HashMap<>();
+    private HashMap<Symbol, Location> environment = new HashMap<>();
     private HashMap<Location, Object> store = new HashMap<>();
     private IdSymbol currentIdSym = null;
+    String filename;
 
     private String IdSymbolGen(IdSymbol sym, int offset, int size) {
         TypeSymbol type = sym.getTypeSymbol();
@@ -87,12 +91,16 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         }
 
         int size = 3;
+        int methodCount = 0;
         currentClass = type;
         for (TypeSymbol c : types)
             for (var sym : c.symbols.values())
                 if (sym instanceof MethodSymbol && sym == type.lookup(sym.getName())) {
                     classDispTable.add("classes", c.getName())
                                   .add("methods", sym.getName());
+                    environment.put(sym, new Location(((MethodSymbol) sym).getTypeSymbol(), methodCount * 4, 4));
+                    //TODO: store??
+                    methodCount++;
                 }
                 else if (sym instanceof IdSymbol) {
                     classPrototype.add("attrs", IdSymbolGen((IdSymbol) sym, size * 4, 4));
@@ -217,6 +225,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstClass classs) {
+        filename = new File(Compiler.fileNames.get(classs.getCtx())).getName();
         currentClass = classs.getSymbol();
         classPrototype = templates.getInstanceOf("classProt");
         classDispTable = templates.getInstanceOf("classDispTab");
@@ -288,11 +297,12 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstDispatch dispatch) {
-        var st = templates.getInstanceOf("sequence");
-        st.add("e", dispatch.getCaller().accept(this));
-
         // Check if callee is null
-        var callSt = templates.getInstanceOf("call");
+        var st = templates.getInstanceOf("dispatch");
+        st.add("caller", dispatch.getCaller().accept(this))
+          .add("dispIdx", dispIndex++)
+          .add("filenameTag", stringConstant(filename))
+          .add("line", dispatch.getToken().getLine());
 
         // Pushing arguments to the stack, in reverse order
         var it = dispatch.getParams().listIterator();
@@ -300,18 +310,13 @@ public class CodeGenVisitor implements AstVisitor<ST> {
             var arg = it.previous();
             var push = templates.getInstanceOf("push")
                     .add("arg", arg.accept(this));
-            callSt.add("args", push);
+            st.add("args", push);
         }
 
-        // Obtaining the method name
+        // Obtaining the method offset
         String methodName = dispatch.getCallee().getToken().getText();
-        String callId;
-        if (dispatch.getType() != null)
-            callId = dispatch.getType().getToken().getText() + "." + methodName;
-        else
-            callId = dispatch.getCallee().getSymbol().getTypeSymbol().getName() + "." + methodName;
-        callSt.add("id", callId);
-        return st.add("e", callSt);
+        Location loc = environment.get(dispatch.getTypeSymbol().lookup(methodName));
+        return st.add("methodOffset", loc.getOffset());
     }
 
     @Override
@@ -358,7 +363,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstId id) {
         var st = templates.getInstanceOf("sequence");
         if (id.getToken().getText().equals("self"))
-            st.add("e", "move $a0 $s0");
+            st.add("e", "\tmove $a0 $s0");
         else {
             // TODO: retrieve id value
         }
@@ -397,7 +402,26 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstCall call) {
-        return null;
+        // Check if callee is null
+        var st = templates.getInstanceOf("dispatch");
+        st.add("caller", 	"\tmove $a0 $s0")
+                .add("dispIdx", dispIndex++)
+                .add("filenameTag", stringConstant(filename))
+                .add("line", call.getToken().getLine());
+
+        // Pushing arguments to the stack, in reverse order
+        var it = call.getParams().listIterator();
+        while (it.hasPrevious()) {
+            var arg = it.previous();
+            var push = templates.getInstanceOf("push")
+                    .add("arg", arg.accept(this));
+            st.add("args", push);
+        }
+
+        // Obtaining the method offset
+        String methodName = call.getMethod().getToken().getText();
+        Location loc = environment.get(call.getTypeSymbol().lookup(methodName));
+        return st.add("methodOffset", loc.getOffset());
     }
 
     @Override

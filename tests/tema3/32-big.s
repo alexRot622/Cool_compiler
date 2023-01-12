@@ -143,24 +143,24 @@ Int_protObj:
     .word 2
     .word 4
     .word Int_dispTab
-    .word 0
+.word 0
 String_protObj:
     .word 3
     .word 5
     .word String_dispTab
-    .word int_const0
-    .asciiz ""
+.word int_const0
+.asciiz ""
 Bool_protObj:
     .word 4
     .word 4
     .word Bool_dispTab
-    .word 0
+.word 0
 List_protObj:
     .word 5
     .word 5
     .word List_dispTab
-    .word 0
-    .word 0
+.word 0
+.word 0
 Main_protObj:
     .word 6
     .word 3
@@ -241,7 +241,7 @@ Object_init:
     sw $ra 4($sp)
     addiu $fp $sp 4
     move $s0 $a0
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -255,7 +255,7 @@ IO_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -269,7 +269,7 @@ Int_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -283,7 +283,7 @@ String_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -297,7 +297,7 @@ Bool_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -311,7 +311,7 @@ List_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal IO_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -349,7 +349,7 @@ Main_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal IO_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
@@ -399,7 +399,7 @@ A2I_init:
     addiu $fp $sp 4
     move $s0 $a0
     jal Object_init
-    move $s0 $a0
+    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
