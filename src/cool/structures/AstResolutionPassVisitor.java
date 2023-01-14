@@ -203,6 +203,7 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
             return null;
         }
         id.setTypeSymbol(type);
+        formal.setIdSymbol(id);
         return type;
     }
 
@@ -234,6 +235,7 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
         if (idSymbol == null) {
             return null;
         }
+        assign.getId().setSymbol(idSymbol);
 
         TypeSymbol declType = idSymbol.getTypeSymbol();
         if (declType == null)
@@ -620,6 +622,7 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
         TypeSymbol returnType;
         returnType = (TypeSymbol) typeSymbol;
 
+        neww.setTypeSymbol(returnType);
         return returnType;
     }
 
@@ -749,7 +752,6 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
         for (int i = 0; i < let.size(); i++) {
             AstId id = let.getId(i);
             String idName = id.getToken().getText();
-
             AstType type = let.getType(i);
             String typeName = type.getToken().getText();
             TypeSymbol declType = (TypeSymbol) let.getScope().lookup(typeName);

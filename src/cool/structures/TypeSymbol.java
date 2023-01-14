@@ -1,6 +1,7 @@
 package cool.structures;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -132,6 +133,7 @@ public class TypeSymbol extends Symbol implements Scope {
         return result;
     }
 
+    public static HashMap<Integer, TypeSymbol> tagMap = new HashMap<>();
     public int setTags() {
         if (this != OBJECT)
             return 0;
@@ -145,6 +147,7 @@ public class TypeSymbol extends Symbol implements Scope {
     private int setTags(int tag) {
         if (this.tag < 0) {
             this.tag = tag;
+            tagMap.put(tag, this);
             tag++;
         }
         for (var sym : children)
@@ -181,6 +184,8 @@ public class TypeSymbol extends Symbol implements Scope {
         OBJECT.add(STRING);
         OBJECT.add(BOOL);
         OBJECT.tag = 0;
+        tagMap.put(0, OBJECT);
+
 
         OBJECT.addChild(IO);
     }
@@ -204,11 +209,14 @@ public class TypeSymbol extends Symbol implements Scope {
         MethodSymbol in_int = new MethodSymbol(IO, INT, "in_int");
         IO.add(in_int);
         IO.tag = 1;
+        tagMap.put(1, IO);
+
     }
 
     // Int class
     static {
         INT.tag = 2;
+        tagMap.put(2, INT);
     }
 
     // String Class
@@ -228,20 +236,18 @@ public class TypeSymbol extends Symbol implements Scope {
         substr.add(new IdSymbol(INT, "l"));
         STRING.add(substr);
         STRING.tag = 3;
+        tagMap.put(3, STRING);
     }
 
     // Bool Class
     static {
         BOOL.tag = 4;
+        tagMap.put(4, BOOL);
     }
 
     // For code generation only
     public static final TypeSymbol _INT    = new TypeSymbol(null, "Int");
     public static final TypeSymbol _STRING = new TypeSymbol(null, "String");
     public static final TypeSymbol _BOOL   = new TypeSymbol(null, "Bool");
-
-    public boolean basicClass() {
-        return this == INT || this == STRING || this == BOOL;
-    }
 
 }

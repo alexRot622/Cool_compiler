@@ -39,7 +39,7 @@ classProt(name, tag, size, attrs) ::= <<
     .word <tag>
     .word <size>
     .word <name>_dispTab
-<sequence(attrs)>
+    <sequence(attrs)>
 
 >>
 
@@ -51,6 +51,11 @@ classDispTab(name, classes, methods) ::= <<
 classNameTab(names) ::= <<
 class_nameTab:
     <names:{name | .word str_const<name><\n>}>
+>>
+
+objTab(classes) ::= <<
+class_objTab:
+    <classes:{class | .word <class>_protObj<\n>.word <class>_init<\n>}>
 >>
 
 intConst(tag, value) ::= <<
@@ -105,8 +110,11 @@ initAttr(offset) ::= <<
     sw $a0 <offset>($s0)
 >>
 
+mem(n) ::= <<
+    addiu $sp $sp <n>
+>>
 // TODO: args
-method(class, name, e) ::= <<
+method(class, name, e, paramsSize) ::= <<
 <class>.<name>:
     addiu $sp $sp -12
     sw $fp 12($sp)
@@ -115,10 +123,11 @@ method(class, name, e) ::= <<
     addiu $fp $sp 4
     move $s0 $a0
 <e>
-    lw $fp 12($fp)
+    lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
     addiu $sp $sp 12
+<if(paramsSize)><mem(paramsSize)><endif>
     jr $ra
 >>
 
@@ -128,13 +137,17 @@ push(arg) ::= <<
     addiu $sp $sp -4
 >>
 
-call(offset) ::= <<
+call(offset, typename) ::= <<
+<if(typename)>
+    la $t1 <typename>_dispTab # dispatch table
+<else>
     lw $t1 8($a0) # dispatch table
+<endif>
     lw $t1 <offset>($t1) # method offset
     jalr $t1
 >>
 
-dispatch(caller, dispIdx, filenameTag, line, args, methodOffset) ::= <<
+dispatch(caller, dispIdx, filenameTag, line, args, methodOffset, typename) ::= <<
 <sequence(args)>
 <caller>
     bnez $a0 dispatch<dispIdx>
@@ -142,14 +155,59 @@ dispatch(caller, dispIdx, filenameTag, line, args, methodOffset) ::= <<
     li $t1 <line>
     jal _dispatch_abort
 dispatch<dispIdx>:
-<call(methodOffset)>
->>
-
-loadVar(offset) ::= <<
-    lw $a0 <offset>($s0)
+<call(methodOffset, typename)>
 >>
 
 // EXPRESSIONS
 literal(addr) ::= <<
     la $a0 <addr>
+>>
+
+// TODO (CRISTI): loads and assigns unified
+loadVar(offset) ::= <<
+    lw $a0 <offset>($s0)
+>>
+
+assignVar(offset) ::= <<
+    sw $a0 <offset>($s0)
+>>
+
+loadParam(offset) ::= <<
+    lw $a0 <offset>($fp)
+>>
+
+assignParam(offset) ::= <<
+    sw $a0 <offset>($fp)
+>>
+
+newObj(class) ::= <<
+    la $a0 <class>_protObj
+    jal Object.copy
+    jal <class>_init
+>>
+
+newSelfObj() ::= <<
+    la $t1 class_objTab
+    lw $t2 0($s0)
+    sll $t2 $t2 3
+    addu $t1 $t1 $t2
+    sw $t1 0($sp)
+    addiu $sp $sp -4
+    lw $a0 0($t1)
+    jal Object.copy
+    lw $t1 4($sp)
+    addiu $sp $sp 4
+    lw $t1 4($t1)
+    jalr $t1
+>>
+
+iff(cond, e1, e2, index) ::= <<
+<cond>
+    lw $t1 12($a0) # bool slot
+    beqz $t1 else<index>
+<e1>
+    b endif<index>
+else<index>:
+<e2>
+endif<index>:
 >>

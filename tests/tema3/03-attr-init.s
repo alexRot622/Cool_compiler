@@ -184,6 +184,32 @@ class_nameTab:
     .word str_const9
     .word str_const12
 
+class_objTab:
+    .word Object_protObj
+    .word Object_init
+    .word IO_protObj
+    .word IO_init
+    .word Int_protObj
+    .word Int_init
+    .word String_protObj
+    .word String_init
+    .word Bool_protObj
+    .word Bool_init
+    .word A_protObj
+    .word A_init
+    .word B_protObj
+    .word B_init
+    .word D_protObj
+    .word D_init
+    .word E_protObj
+    .word E_init
+    .word Main_protObj
+    .word Main_init
+    .word C_protObj
+    .word C_init
+    .word F_protObj
+    .word F_init
+
 Object_protObj:
     .word 0
     .word 3
@@ -196,60 +222,60 @@ Int_protObj:
     .word 2
     .word 4
     .word Int_dispTab
-.word 0
+    .word 0
 String_protObj:
     .word 3
     .word 5
     .word String_dispTab
-.word int_const0
-.asciiz ""
+    .word int_const0
+    .asciiz ""
 Bool_protObj:
     .word 4
     .word 4
     .word Bool_dispTab
-.word 0
+    .word bool_const0
 A_protObj:
     .word 5
     .word 4
     .word A_dispTab
-.word int_const0
+    .word int_const0
 B_protObj:
     .word 6
     .word 5
     .word B_dispTab
-.word int_const0
-.word str_const0
+    .word int_const0
+    .word str_const0
 C_protObj:
     .word 10
     .word 5
     .word C_dispTab
-.word int_const0
-.word 0
+    .word int_const0
+    .word bool_const0
 D_protObj:
     .word 7
     .word 5
     .word D_dispTab
-.word int_const0
-.word str_const0
+    .word int_const0
+    .word str_const0
 E_protObj:
     .word 8
     .word 5
     .word E_dispTab
-.word int_const0
-.word str_const0
+    .word int_const0
+    .word str_const0
 F_protObj:
     .word 11
     .word 5
     .word F_dispTab
-.word int_const0
-.word 0
+    .word int_const0
+    .word bool_const0
 Main_protObj:
     .word 9
     .word 6
     .word Main_dispTab
-.word int_const0
-.word str_const0
-.word 0
+    .word int_const0
+    .word str_const0
+    .word 0
 
 Object_dispTab:
     .word Object.abort
@@ -494,7 +520,7 @@ Main.main:
     addiu $fp $sp 4
     move $s0 $a0
     la $a0 int_const0
-    lw $fp 12($fp)
+    lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)
     addiu $sp $sp 12

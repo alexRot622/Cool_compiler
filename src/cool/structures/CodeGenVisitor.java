@@ -8,6 +8,7 @@ import org.stringtemplate.v4.STGroupFile;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 
 public class CodeGenVisitor implements AstVisitor<ST> {
     static STGroupFile templates = new STGroupFile("cgen.stg");
@@ -30,18 +31,17 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     // Mapping between class tag and the tag of the string constant corresponding to the class name
     ArrayList<Integer> classToName;
-    private TypeSymbol currentClass = null;
     private Scope currentScope = null;
 
-    private HashMap<Symbol, Location> environment = new HashMap<>();
-    private HashMap<Location, Object> store = new HashMap<>();
+    private final HashMap<Symbol, Location> environment = new HashMap<>();
+    private final HashMap<Location, Object> store = new HashMap<>();
     private IdSymbol currentIdSym = null;
     String filename;
 
     private String IdSymbolGen(IdSymbol sym, int offset, int size) {
         TypeSymbol type = sym.getTypeSymbol();
         if (!environment.containsKey(sym)) {
-            Location loc = new Location(currentClass, offset, size);
+            Location loc = new Location(currentScope, offset, size);
             environment.put(sym, loc);
 
             if (type == TypeSymbol._STRING) {
@@ -56,6 +56,10 @@ public class CodeGenVisitor implements AstVisitor<ST> {
                 store.put(loc, 0);
                 return ".word int_const" + intConstant(0);
             }
+            else if (type == TypeSymbol._BOOL || type == TypeSymbol.BOOL) {
+                store.put(loc, 0);
+                return ".word bool_const0";
+            }
             else {
                 store.put(loc, null);
                 return ".word 0";
@@ -68,6 +72,8 @@ public class CodeGenVisitor implements AstVisitor<ST> {
             return ".word str_const" + stringConstant("");
         else if (type == TypeSymbol.INT)
             return ".word int_const" + intConstant(0);
+        else if (type == TypeSymbol._BOOL || type == TypeSymbol.BOOL)
+            return ".word bool_const0";
         else
             return ".word 0";
     }
@@ -92,18 +98,20 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         }
 
         int size = 3;
-        int methodCount = 0;
-        currentClass = type;
+        currentScope = type;
+        HashSet<MethodSymbol> addedMethods = new HashSet<>();
         for (TypeSymbol c : types)
             for (var sym : c.symbols.values())
-                if (sym instanceof MethodSymbol && sym == type.lookup(sym.getName())) {
-                    classDispTable.add("classes", c.getName())
-                                  .add("methods", sym.getName());
-                    environment.put(sym, new Location(((MethodSymbol) sym).getTypeSymbol(), methodCount * 4, 4));
+                if (sym instanceof MethodSymbol && !addedMethods.contains(sym)) {
+                    //
+                    MethodSymbol methodSymbol = (MethodSymbol) type.lookup(sym.getName());
+                    classDispTable.add("classes", ((TypeSymbol) methodSymbol.getParent()).getName())
+                                  .add("methods", methodSymbol.getName());
+                    environment.put(methodSymbol, new Location(methodSymbol.getParent(), addedMethods.size() * 4, 4));
                     //TODO: store??
-                    methodCount++;
+                    addedMethods.add(methodSymbol);
                 }
-                else if (sym instanceof IdSymbol) {
+                else if (sym instanceof IdSymbol && !(sym instanceof MethodSymbol)) {
                     classPrototype.add("attrs", IdSymbolGen((IdSymbol) sym, size * 4, 4));
                     size++;
                 }
@@ -179,7 +187,13 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         for (AstClass classs : program.getClasses())
            classs.accept(this);
 
+        // Prepare array of class names ordered by their tag for the object table
+        ArrayList<String> classNames = new ArrayList<>();
+        for (int i = 0; i < classTagCount; i++) {
+            classNames.add(TypeSymbol.tagMap.get(i).getName());
+        }
         dataSection.add("nameTab", templates.getInstanceOf("classNameTab").add("names", classToName));
+        dataSection.add("objTab", templates.getInstanceOf("objTab").add("classes", classNames));
 
         var programST = templates.getInstanceOf("program");
         programST.add("data", dataSection);
@@ -227,10 +241,10 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     @Override
     public ST visit(AstClass classs) {
         filename = new File(Compiler.fileNames.get(classs.getCtx())).getName();
-        currentScope = currentClass = classs.getSymbol();
+        currentScope = classs.getSymbol();
         classPrototype = templates.getInstanceOf("classProt");
         classDispTable = templates.getInstanceOf("classDispTab");
-        typeSymbolGen(currentClass);
+        typeSymbolGen(classs.getSymbol());
         for (var feature : classs.getFeatures())
             feature.accept(this);
         return null;
@@ -239,10 +253,20 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     @Override
     public ST visit(AstMethod method) {
         currentScope = method.getSymbol();
+
+        // define formals
+        int offset = 12;
+        for (AstFormal formal : method.getParameters()) {
+            Location loc = new Location(method.getSymbol(), offset, 4);
+            environment.put(formal.getIdSymbol(), loc);
+            offset += 4;
+        }
         var st = templates.getInstanceOf("method");
-        st.add("class", currentClass.name)
+        st.add("class", ((TypeSymbol) currentScope.getParent()).name)
           .add("name", method.getId().getToken().getText())
           .add("e", method.getExpr().accept(this));
+        if (!method.getParameters().isEmpty())
+            st.add("paramsSize", method.getParameters().size() * 4);
         funcSection.add("e", st);
         return null;
     }
@@ -285,7 +309,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstBool bool) {
-        boolean b = bool.getToken().getText().toLowerCase().equals("true");
+        boolean b = bool.getToken().getText().equalsIgnoreCase("true");
         String addr = "bool_const" + (b ? "1" : "0");
         if (currentIdSym != null)
             store.put(environment.get(currentIdSym), addr);
@@ -294,7 +318,24 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstAssign assign) {
-        return null;
+        currentIdSym = assign.getId().getSymbol();
+        var st = templates.getInstanceOf("sequence");
+        st.add("e", assign.getExpr().accept(this));
+        Location loc = environment.get(assign.getId().getSymbol());
+        if (loc == null) {
+            System.err.println(assign.getId().getToken().getLine() + ": runtime error");
+            currentIdSym = null;
+            return null;
+        }
+
+        // TODO (CRISTI): Replace assignVar, assignParam with a single template, assign; same for loadVar, loadParam
+        if (loc.getScope() instanceof TypeSymbol) // On heap
+            st.add("e", templates.getInstanceOf("assignVar").add("offset", loc.getOffset()));
+        else // On stack
+            st.add("e", templates.getInstanceOf("assignParam").add("offset", loc.getOffset()));
+
+        currentIdSym = null;
+        return st;
     }
 
     @Override
@@ -313,6 +354,9 @@ public class CodeGenVisitor implements AstVisitor<ST> {
           .add("dispIdx", dispIndex++)
           .add("filenameTag", stringConstant(filename))
           .add("line", dispatch.getToken().getLine());
+        if (dispatch.getType().getToken() != null) {
+            st.add("typename", dispatch.getType().getToken().getText());
+        }
 
         // Obtaining the method offset
         String methodName = dispatch.getCallee().getToken().getText();
@@ -326,7 +370,12 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstIf iff) {
-        return null;
+        var st = templates.getInstanceOf("iff");
+        st.add("cond", iff.getCond().accept(this))
+          .add("e1", iff.getThenBranch().accept(this))
+          .add("e2", iff.getElseBranch().accept(this))
+          .add("index", ifIndex++);
+        return st;
     }
 
     @Override
@@ -378,9 +427,13 @@ public class CodeGenVisitor implements AstVisitor<ST> {
             Location loc = environment.get(sym);
             if (loc == null) {
                 System.err.println(id.getToken().getLine() + ": runtime error");
+                return null;
             }
 
-            st.add("e", templates.getInstanceOf("loadVar").add("offset", loc.getOffset()));
+            if (loc.getScope() instanceof TypeSymbol) // On heap
+                st.add("e", templates.getInstanceOf("loadVar").add("offset", loc.getOffset()));
+            else // On stack
+                st.add("e", templates.getInstanceOf("loadParam").add("offset", loc.getOffset()));
         }
         return st;
     }
@@ -407,7 +460,12 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstNew neww) {
-        return null;
+        // TODO: is this correct?
+        TypeSymbol type = neww.getTypeSymbol();
+        if (type instanceof SelfTypeSymbol) {
+            return templates.getInstanceOf("newSelfObj");
+        }
+        return templates.getInstanceOf("newObj").add("class", type.getName());
     }
 
     @Override
@@ -435,7 +493,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
         // Obtaining the method offset
         String methodName = call.getMethod().getToken().getText();
-        Location loc = environment.get(currentClass.lookup(methodName));
+        Location loc = environment.get(currentScope.lookup(methodName));
         if (loc == null) {
             System.err.println(call.getMethod().getToken().getLine() + ": runtime error");
             return null;
@@ -458,7 +516,39 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstLet let) {
-        return null;
+        // TODO: operational semantics state that let is recursively evaluated...
+        currentScope = let.getScope();
+        var st = templates.getInstanceOf("sequence");
+        // Allocate memory
+        st.add("e", templates.getInstanceOf("mem").add("n", -4 * let.size()));
+
+        for (int i = 0; i < let.size(); i++) {
+            var assignSt = templates.getInstanceOf("assignParam");
+            if (let.isAssigned(i))
+                st.add("e", let.getValue(i).accept(this));
+            else {
+                TypeSymbol typeSymbol = (TypeSymbol) SymbolTable.globals.lookup(let.getType(i).getToken().getText());
+                if (typeSymbol == TypeSymbol.INT)
+                    st.add("e", "\tla $a0 int_const" + intConstant(0));
+                else if (typeSymbol == TypeSymbol.STRING)
+                    st.add("e", "\tla $a0 str_const" + stringConstant(""));
+                else if (typeSymbol == TypeSymbol.BOOL)
+                    st.add("e", "\tla $a0 bool_const0");
+                else
+                    st.add("e", "\tli $a0 0");
+            }
+            Location loc = new Location(currentScope, -4 * (i + 1), 4);
+            environment.put(let.getId(i).getSymbol(), loc);
+            assignSt.add("offset", loc.getOffset());
+            st.add("e", assignSt);
+        }
+        st.add("e",let.getBlock().accept(this));
+
+        // Free memory
+        st.add("e", templates.getInstanceOf("mem").add("n", 4 * let.size()));
+
+        currentScope = null;
+        return st;
     }
 
     @Override
@@ -467,17 +557,18 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     }
 
     private class Location {
-        private TypeSymbol type;
-        private int offset, size;
+        private final Scope scope;
+        private final int offset;
+        private final int size;
 
-        public Location(TypeSymbol type, int offset, int size) {
-            this.type = type;
+        public Location(Scope scope, int offset, int size) {
+            this.scope = scope;
             this.offset = offset;
             this.size = size;
         }
 
-        public TypeSymbol getType() {
-            return type;
+        public Scope getScope() {
+            return scope;
         }
 
         public int getOffset() {
