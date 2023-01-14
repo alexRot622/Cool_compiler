@@ -2,6 +2,6 @@ Loaded: trap.handler.nogc
 The following symbols are undefined:
 main
 
-NO1
+YES1
 NO2
 COOL program successfully executed

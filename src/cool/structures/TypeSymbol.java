@@ -1,5 +1,7 @@
 package cool.structures;
 
+import org.stringtemplate.v4.ST;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -138,7 +140,7 @@ public class TypeSymbol extends Symbol implements Scope {
         if (this != OBJECT)
             return 0;
 
-        int tag = 5;
+        int tag = 1;
         for (var sym : children)
             tag = sym.setTags(tag);
         return tag;
@@ -186,8 +188,10 @@ public class TypeSymbol extends Symbol implements Scope {
         OBJECT.tag = 0;
         tagMap.put(0, OBJECT);
 
-
         OBJECT.addChild(IO);
+        OBJECT.addChild(INT);
+        OBJECT.addChild(STRING);
+        OBJECT.addChild(BOOL);
     }
 
     // IO Class
@@ -208,15 +212,6 @@ public class TypeSymbol extends Symbol implements Scope {
 
         MethodSymbol in_int = new MethodSymbol(IO, INT, "in_int");
         IO.add(in_int);
-        IO.tag = 1;
-        tagMap.put(1, IO);
-
-    }
-
-    // Int class
-    static {
-        INT.tag = 2;
-        tagMap.put(2, INT);
     }
 
     // String Class
@@ -235,14 +230,6 @@ public class TypeSymbol extends Symbol implements Scope {
         substr.add(new IdSymbol(INT, "i"));
         substr.add(new IdSymbol(INT, "l"));
         STRING.add(substr);
-        STRING.tag = 3;
-        tagMap.put(3, STRING);
-    }
-
-    // Bool Class
-    static {
-        BOOL.tag = 4;
-        tagMap.put(4, BOOL);
     }
 
     // For code generation only

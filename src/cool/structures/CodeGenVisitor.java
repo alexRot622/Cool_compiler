@@ -21,7 +21,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     ST classDispTable;
     ST classInit;
 
-    int ifIndex = 0;
+    int labelIndex = 0;
     int dispIndex = 0;
     int strConstTag = 0;
     HashMap<String, Integer> strTagMap = new HashMap<>();
@@ -103,7 +103,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         for (TypeSymbol c : types)
             for (var sym : c.symbols.values())
                 if (sym instanceof MethodSymbol && !addedMethods.contains(sym)) {
-                    //
                     MethodSymbol methodSymbol = (MethodSymbol) type.lookup(sym.getName());
                     classDispTable.add("classes", ((TypeSymbol) methodSymbol.getParent()).getName())
                                   .add("methods", methodSymbol.getName());
@@ -208,7 +207,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     private int intConstant(int i) {
         if (!intTagMap.containsKey(i)) {
             ST st = templates.getInstanceOf("intConst");
-            st.add("tag", intConstTag).add("value", i);
+            st.add("constTag", intConstTag).add("intTag", TypeSymbol.INT.tag).add("value", i);
             dataSection.add("consts", st);
             intTagMap.put(i, intConstTag);
             intConstTag++;
@@ -221,7 +220,8 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     private int stringConstant(String s) {
         if (!strTagMap.containsKey(s)) {
             ST st = templates.getInstanceOf("strConst");
-            st.add("tag", strConstTag)
+            st.add("constTag", strConstTag)
+              .add("strTag", TypeSymbol.STRING.tag)
               .add("size", Math.round(Math.ceil(4 + s.length() / 4.0)))
               .add("lenTag", intConstant(s.length()))
               .add("value", s);
@@ -233,8 +233,12 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     }
 
     private void addBoolsConstants() {
-        ST stFalse = templates.getInstanceOf("boolConst").add("tag", 0).add("value", 0);
-        ST stTrue = templates.getInstanceOf("boolConst").add("tag", 1).add("value", 1);
+        ST stFalse = templates.getInstanceOf("boolConst").add("constTag", 0)
+                                                               .add("boolTag", TypeSymbol.BOOL.tag)
+                                                               .add("value", 0);
+        ST stTrue = templates.getInstanceOf("boolConst").add("constTag", 1)
+                                                              .add("boolTag", TypeSymbol.BOOL.tag)
+                                                              .add("value", 1);
         dataSection.add("consts", stFalse).add("consts", stTrue);
     }
 
@@ -318,10 +322,10 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstAssign assign) {
-        currentIdSym = assign.getId().getSymbol();
+        currentIdSym = (IdSymbol) currentScope.lookup(assign.getId().getToken().getText());
         var st = templates.getInstanceOf("sequence");
         st.add("e", assign.getExpr().accept(this));
-        Location loc = environment.get(assign.getId().getSymbol());
+        Location loc = environment.get(currentIdSym);
         if (loc == null) {
             System.err.println(assign.getId().getToken().getLine() + ": runtime error");
             currentIdSym = null;
@@ -374,43 +378,73 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         st.add("cond", iff.getCond().accept(this))
           .add("e1", iff.getThenBranch().accept(this))
           .add("e2", iff.getElseBranch().accept(this))
-          .add("index", ifIndex++);
+          .add("index", labelIndex++);
         return st;
     }
 
     @Override
     public ST visit(AstDivide divide) {
-        return null;
+        var st = templates.getInstanceOf("arithmetic");
+        st.add("op", "div")
+          .add("e1", divide.getLeft().accept(this))
+          .add("e2", divide.getRight().accept(this));
+        return st;
     }
 
     @Override
     public ST visit(AstEquals equals) {
-        return null;
+        var st = templates.getInstanceOf("eq");
+        st.add("e1", equals.getLeft().accept(this))
+          .add("e2", equals.getRight().accept(this))
+          .add("index", labelIndex++);
+        return st;
     }
 
     @Override
     public ST visit(AstLess less) {
-        return null;
+        var st = templates.getInstanceOf("compare");
+        st.add("e1", less.getLeft().accept(this))
+          .add("e2", less.getRight().accept(this))
+          .add("op", "blt")
+          .add("index", labelIndex++);
+        return st;
     }
 
     @Override
     public ST visit(AstLessEquals lessEquals) {
-        return null;
+        var st = templates.getInstanceOf("compare");
+        st.add("e1", lessEquals.getLeft().accept(this))
+          .add("e2", lessEquals.getRight().accept(this))
+          .add("op", "ble")
+          .add("index", labelIndex++);
+        return st;
     }
 
     @Override
     public ST visit(AstMinus minus) {
-        return null;
+        var st = templates.getInstanceOf("arithmetic");
+        st.add("op", "sub")
+                .add("e1", minus.getLeft().accept(this))
+                .add("e2", minus.getRight().accept(this));
+        return st;
     }
 
     @Override
     public ST visit(AstMultiply multiply) {
-        return null;
+        var st = templates.getInstanceOf("arithmetic");
+        st.add("op", "mul")
+          .add("e1", multiply.getLeft().accept(this))
+          .add("e2", multiply.getRight().accept(this));
+        return st;
     }
 
     @Override
     public ST visit(AstPlus plus) {
-        return null;
+        var st = templates.getInstanceOf("arithmetic");
+        st.add("op", "add")
+          .add("e1", plus.getLeft().accept(this))
+          .add("e2", plus.getRight().accept(this));
+        return st;
     }
 
     @Override
@@ -440,22 +474,28 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstParantheses parantheses) {
-        return null;
+        return parantheses.getExpr().accept(this);
     }
 
     @Override
     public ST visit(AstNegate negate) {
-        return null;
+        return templates.getInstanceOf("neg").add("e", negate.getExpr().accept(this));
     }
 
     @Override
     public ST visit(AstNot not) {
-        return null;
+        var st = templates.getInstanceOf("sequence");
+        st.add("e", not.getExpr().accept(this))
+          .add("e", templates.getInstanceOf("not").add("index", labelIndex++));
+        return st;
     }
 
     @Override
     public ST visit(AstIsVoid isVoid) {
-        return null;
+        var st = templates.getInstanceOf("sequence");
+        st.add("e",isVoid.getExpr().accept(this))
+          .add("e", templates.getInstanceOf("isvoid").add("index", labelIndex++));
+        return st;
     }
 
     @Override
@@ -503,7 +543,11 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstWhile whilee) {
-        return null;
+        var st = templates.getInstanceOf("while");
+        st.add("cond", whilee.getCond().accept(this))
+                .add("e", whilee.getExpr().accept(this))
+                .add("index", labelIndex++);
+        return st;
     }
 
     @Override
