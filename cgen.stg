@@ -291,7 +291,35 @@ endwhile<index>:
     move $a0 $zero
 >>
 
-caseBranch(index) ::= <<
+caseBranch(e, lowerTag, upperTag, branchIndex, nextBranchIndex, caseIndex) ::= <<
+<if(branchIndex)>
+casebranch<branchIndex>:
+<endif>
+    blt $t1 <lowerTag> casebranch<nextBranchIndex>
+    bgt $t1 <upperTag> casebranch<nextBranchIndex>
+<e>
+    b endcase<caseIndex>
 >>
-case(caseBranches, index) ::= <<
+
+// If no branch is selected, call abort
+endCaseBranch(branchIndex) ::= <<
+casebranch<branchIndex>:
+    lw $a0 -4($fp)
+    jal _case_abort
+>>
+
+case(cond, caseBranches, filenameTag, line, index) ::= <<
+    addiu $sp $sp -4 # locals alloc
+<cond>
+    sw $a0 -4($fp)
+    bnez $a0 case<index>
+    la $a0 str_const<filenameTag>
+    li $t1 <line>
+    jal _case_abort2
+case<index>:
+    sw $a0 -4($fp)
+    lw $t1 0($a0) # class tag
+<sequence(caseBranches)>
+endcase<index>:
+    addiu $sp $sp 4 # locals free
 >>

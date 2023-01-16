@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 
 public class TypeSymbol extends Symbol implements Scope {
@@ -157,6 +158,16 @@ public class TypeSymbol extends Symbol implements Scope {
         return tag;
     }
 
+    // Get the highest tag possible for a class that conforms to this
+    public int upperTag() {
+        int upperTag = this.tag;
+
+        for (var child : children)
+            upperTag = max(upperTag, child.upperTag());
+
+        return upperTag;
+    }
+
     public static final TypeSymbol OBJECT = new TypeSymbol(null,"Object");
     public static final TypeSymbol IO     = new TypeSymbol(TypeSymbol.OBJECT, "IO");
     public static final TypeSymbol INT    = new TypeSymbol(TypeSymbol.OBJECT, "Int");
@@ -236,5 +247,4 @@ public class TypeSymbol extends Symbol implements Scope {
     public static final TypeSymbol _INT    = new TypeSymbol(null, "Int");
     public static final TypeSymbol _STRING = new TypeSymbol(null, "String");
     public static final TypeSymbol _BOOL   = new TypeSymbol(null, "Bool");
-
 }

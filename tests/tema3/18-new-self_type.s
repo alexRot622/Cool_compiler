@@ -730,6 +730,20 @@ dispatch3:
     lw $ra 4($sp)
     addiu $sp $sp 12
     jr $ra
+G_init:
+    addiu $sp $sp -12
+    sw $fp 12($sp)
+    sw $s0 8($sp)
+    sw $ra 4($sp)
+    addiu $fp $sp 4
+    move $s0 $a0
+    jal Main_init
+    move $a0 $s0
+    lw $fp 12($sp)
+    lw $s0 8($sp)
+    lw $ra 4($sp)
+    addiu $sp $sp 12
+    jr $ra
 Main.main:
     addiu $sp $sp -12
     sw $fp 12($sp)
@@ -748,20 +762,6 @@ dispatch4:
     lw $t1 8($a0) # dispatch table
     lw $t1 40($t1) # method offset
     jalr $t1
-    lw $fp 12($sp)
-    lw $s0 8($sp)
-    lw $ra 4($sp)
-    addiu $sp $sp 12
-    jr $ra
-G_init:
-    addiu $sp $sp -12
-    sw $fp 12($sp)
-    sw $s0 8($sp)
-    sw $ra 4($sp)
-    addiu $fp $sp 4
-    move $s0 $a0
-    jal Main_init
-    move $a0 $s0
     lw $fp 12($sp)
     lw $s0 8($sp)
     lw $ra 4($sp)

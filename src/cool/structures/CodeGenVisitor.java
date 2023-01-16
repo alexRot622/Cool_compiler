@@ -9,6 +9,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.PriorityQueue;
 
 public class CodeGenVisitor implements AstVisitor<ST> {
     static STGroupFile templates = new STGroupFile("cgen.stg");
@@ -79,10 +80,10 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     }
 
     private void typeSymbolGen(TypeSymbol type) {
-        if (classPrototype == null)
-            classPrototype = templates.getInstanceOf("classProt");
-        if (classDispTable == null)
-            classDispTable = templates.getInstanceOf("classDispTab");
+        if (classToName.get(type.tag) >= 0)
+            return;
+        classPrototype = templates.getInstanceOf("classProt");
+        classDispTable = templates.getInstanceOf("classDispTab");
 
         classPrototype.add("name", type.getName())
                       .add("tag", type.tag);
@@ -183,6 +184,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         typeSymbolGen(TypeSymbol.STRING);
         typeSymbolGen(TypeSymbol.BOOL);
 
+        // Visit class nodes
         for (AstClass classs : program.getClasses())
            classs.accept(this);
 
@@ -246,8 +248,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstClass classs) {
         filename = new File(Compiler.fileNames.get(classs.getCtx())).getName();
         currentScope = classs.getSymbol();
-        classPrototype = templates.getInstanceOf("classProt");
-        classDispTable = templates.getInstanceOf("classDispTab");
         typeSymbolGen(classs.getSymbol());
         for (var feature : classs.getFeatures())
             feature.accept(this);
@@ -364,7 +364,11 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
         // Obtaining the method offset
         String methodName = dispatch.getCallee().getToken().getText();
-        Location loc = environment.get(dispatch.getCaller().getTypeSymbol().lookup(methodName));
+        TypeSymbol typeSymbol = dispatch.getCaller().getTypeSymbol();
+        if (typeSymbol instanceof SelfTypeSymbol)
+            typeSymbol = (TypeSymbol) typeSymbol.getParent();
+        typeSymbolGen(typeSymbol);
+        Location loc = environment.get(typeSymbol.lookup(methodName));
         if (loc == null) {
             System.err.println(dispatch.getCallee().getToken().getLine() + ": runtime error");
             return null;
@@ -510,7 +514,72 @@ public class CodeGenVisitor implements AstVisitor<ST> {
 
     @Override
     public ST visit(AstCase casee) {
-        return null;
+        var st = templates.getInstanceOf("case");
+
+        var ids = casee.getIds();
+        var types = casee.getTypes();
+        var exprs = casee.getExprs();
+        int caseIndex = labelIndex++;
+        Location loc = new Location(currentScope, -4, 4);
+
+        // Comparable branch class, for ordering by how specific their types are
+        class Branch implements Comparable<Branch> {
+            final ST st; // ST representation of the branch
+            final int width; // how many types are included in this branch?
+
+            public Branch(ST st, int width) {
+                this.st = st;
+                this.width = width;
+            }
+
+            @Override
+            public int compareTo(Branch b) {
+                return width - b.width;
+            }
+        }
+        PriorityQueue<Branch> branchQueue = new PriorityQueue<>();
+
+        for (int i = 0; i < ids.size(); i++) {
+            // Assign the location to the current representation of the id
+            currentScope = ids.get(i).getScope();
+            environment.put(ids.get(i).getSymbol(), loc);
+
+            TypeSymbol typeSymbol = (TypeSymbol) SymbolTable.globals.lookup(types.get(i).getToken().getText());
+            // Highest tag value in the current type's inheritance subtree
+            int upperTag = typeSymbol.upperTag();
+
+            var branchSt = templates.getInstanceOf("caseBranch");
+            branchSt.add("e", exprs.get(i).accept(this))
+                    .add("lowerTag", typeSymbol.tag)
+                    .add("upperTag", upperTag)
+                    .add("caseIndex", caseIndex);
+            branchQueue.add(new Branch(branchSt, upperTag - typeSymbol.tag));
+            currentScope = currentScope.getParent();
+        }
+        // Add first branch without a label
+        var top = branchQueue.poll();
+        top.st.add("nextBranchIndex", labelIndex + 1);
+        st.add("caseBranches", top.st);
+        labelIndex++;
+
+        // Chaining of the rest of the branches
+        for (var branch : branchQueue) {
+            branch.st.add("branchIndex", labelIndex)
+                     .add("nextBranchIndex", labelIndex + 1);
+            st.add("caseBranches", branch.st);
+            labelIndex++;
+        }
+
+        // End branch, will call abort if reached
+        var endSt = templates.getInstanceOf("endCaseBranch");
+        endSt.add("branchIndex", labelIndex++);
+
+        st.add("cond", casee.getCond().accept(this))
+          .add("caseBranches", endSt)
+          .add("index", caseIndex)
+          .add("filenameTag", stringConstant(filename))
+          .add("line", casee.getToken().getLine());
+        return st;
     }
 
     @Override
@@ -567,6 +636,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         st.add("e", templates.getInstanceOf("mem").add("n", -4 * let.size()));
 
         for (int i = 0; i < let.size(); i++) {
+            currentScope = let.getScope();
             var assignSt = templates.getInstanceOf("assignParam");
             if (let.isAssigned(i))
                 st.add("e", let.getValue(i).accept(this));
@@ -586,12 +656,14 @@ public class CodeGenVisitor implements AstVisitor<ST> {
             assignSt.add("offset", loc.getOffset());
             st.add("e", assignSt);
         }
-        st.add("e",let.getBlock().accept(this));
+
+        currentScope = let.getScope();
+        st.add("e", let.getBlock().accept(this));
 
         // Free memory
         st.add("e", templates.getInstanceOf("mem").add("n", 4 * let.size()));
 
-        currentScope = null;
+        currentScope = currentScope.getParent();
         return st;
     }
 

@@ -732,6 +732,8 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
             return TypeSymbol.OBJECT;
         }
 
+        whilee.getExpr().accept(this);
+
         return TypeSymbol.OBJECT;
     }
 
