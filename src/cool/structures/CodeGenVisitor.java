@@ -14,7 +14,6 @@ import java.util.PriorityQueue;
 public class CodeGenVisitor implements AstVisitor<ST> {
     static STGroupFile templates = new STGroupFile("cgen.stg");
 
-    ST mainSection;
     ST dataSection;
     ST funcSection;
 
@@ -35,7 +34,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     private Scope currentScope = null;
 
     private final HashMap<Symbol, Location> environment = new HashMap<>();
-    private final HashMap<Location, Object> store = new HashMap<>();
     private IdSymbol currentIdSym = null;
     String filename;
 
@@ -46,23 +44,18 @@ public class CodeGenVisitor implements AstVisitor<ST> {
             environment.put(sym, loc);
 
             if (type == TypeSymbol._STRING) {
-                store.put(loc, "");
                 return ".asciiz \"\"";
             }
             else if (type == TypeSymbol.STRING) {
-                store.put(loc, "");
                 return ".word str_const" + stringConstant("");
             }
             else if (type == TypeSymbol.INT) {
-                store.put(loc, 0);
                 return ".word int_const" + intConstant(0);
             }
             else if (type == TypeSymbol._BOOL || type == TypeSymbol.BOOL) {
-                store.put(loc, 0);
                 return ".word bool_const0";
             }
             else {
-                store.put(loc, null);
                 return ".word 0";
             }
         }
@@ -108,7 +101,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
                     classDispTable.add("classes", ((TypeSymbol) methodSymbol.getParent()).getName())
                                   .add("methods", methodSymbol.getName());
                     environment.put(methodSymbol, new Location(methodSymbol.getParent(), addedMethods.size() * 4, 4));
-                    //TODO: store??
                     addedMethods.add(methodSymbol);
                 }
                 else if (sym instanceof IdSymbol && !(sym instanceof MethodSymbol)) {
@@ -136,7 +128,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstProgram program) {
         dataSection = templates.getInstanceOf("dataSection");
         funcSection = templates.getInstanceOf("sequence");
-        mainSection = templates.getInstanceOf("sequence");
 
         // Preparing Symbol table for code generation
         int classTagCount = TypeSymbol.OBJECT.setTags();
@@ -199,7 +190,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
         var programST = templates.getInstanceOf("program");
         programST.add("data", dataSection);
         programST.add("textFuncs", funcSection);
-        programST.add("textMain", mainSection);
 
         return programST;
     }
@@ -297,8 +287,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstInt intt) {
         int i = Integer.parseInt(intt.getToken().getText());
         String addr = "int_const" + intConstant(i);
-        if (currentIdSym != null)
-            store.put(environment.get(currentIdSym), addr);
         return templates.getInstanceOf("literal").add("addr", addr);
     }
 
@@ -306,8 +294,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstString string) {
         String s = string.getToken().getText();
         String addr = "str_const" + stringConstant(s);
-        if (currentIdSym != null)
-            store.put(environment.get(currentIdSym), addr);
         return templates.getInstanceOf("literal").add("addr", addr);
     }
 
@@ -315,8 +301,6 @@ public class CodeGenVisitor implements AstVisitor<ST> {
     public ST visit(AstBool bool) {
         boolean b = bool.getToken().getText().equalsIgnoreCase("true");
         String addr = "bool_const" + (b ? "1" : "0");
-        if (currentIdSym != null)
-            store.put(environment.get(currentIdSym), addr);
         return templates.getInstanceOf("literal").add("addr", addr);
     }
 
@@ -332,7 +316,7 @@ public class CodeGenVisitor implements AstVisitor<ST> {
             return null;
         }
 
-        // TODO (CRISTI): Replace assignVar, assignParam with a single template, assign; same for loadVar, loadParam
+        // TODO (ALINA): Replace assignVar, assignParam with a single template, assign; same for loadVar, loadParam
         if (loc.getScope() instanceof TypeSymbol) // On heap
             st.add("e", templates.getInstanceOf("assignVar").add("offset", loc.getOffset()));
         else // On stack

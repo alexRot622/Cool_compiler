@@ -163,7 +163,7 @@ literal(addr) ::= <<
     la $a0 <addr>
 >>
 
-// TODO (CRISTI): loads and assigns unified
+// TODO (ALINA): loads and assigns unified
 loadVar(offset) ::= <<
     lw $a0 <offset>($s0)
 >>

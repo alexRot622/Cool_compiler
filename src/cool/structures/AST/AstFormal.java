@@ -4,7 +4,7 @@ import cool.structures.IdSymbol;
 import org.antlr.v4.runtime.Token;
 
 public class AstFormal extends AstNode {
-    // TODO (CRISTI): make this class use AstId instead of id Token and IdSymbol
+    // TODO (ALINA): make this class use AstId instead of id Token and IdSymbol
     Token id;
     Token type;
     IdSymbol idSymbol;

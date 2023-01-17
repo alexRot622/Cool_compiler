@@ -259,7 +259,7 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
     @Override
     public TypeSymbol visit(AstDispatch dispatch) {
         TypeSymbol exprType = dispatch.getCaller().accept(this);
-        // TODO (CRISTI): since We're adding "setTypeSymbol" to all visit(AstExpression) methods, should this be removed?
+        // TODO (ALINA): since We're adding "setTypeSymbol" to all visit(AstExpression) methods, should this be removed?
         dispatch.getCaller().setTypeSymbol(exprType); // Temporary crutch
         if (exprType == null)
             return null;
@@ -365,7 +365,7 @@ public class AstResolutionPassVisitor implements AstVisitor<TypeSymbol> {
         if (condType != TypeSymbol.BOOL)
             SymbolTable.error(ctx, iff.getCond().getToken(), "If condition has type " +
                               condType.name + " instead of Bool");
-        //TODO (CRISTI): set type of visited classes everywhere. Is this correct? check with testers.
+        //TODO (ALINA): set type of visited classes everywhere. Is this correct? check with testers.
         // for example, replace the return with:
         /*
             iff.setTypeSymbol(thenType.join(elseType));
